@@ -1,0 +1,184 @@
+1. On ppc64le architecture, show average duration of fastzero 
+   call for a 1GB buffer len.
+
+ppc # ./main -p -n 50 -d | tail -n 1
+avg duration 2102 nsec across 50 iterations
+ ./main -p -n 50 -d | tail -n 1
+avg duration 2110 nsec across 50 iterations
+ppc # ./main -p -n 50 -m | tail -n 1
+avg duration 953 nsec across 50 iterations
+ppc # 
+
+
+2. On ppc64le architecture, show crc values match each other.
+
+
+ppc # ./main -p 
+0 crc=0x105EC76F
+  duration 3062 nsec
+1 crc=0xF26B8303
+  duration 2397 nsec
+2 crc=0x3FC5F181
+  duration 2771 nsec
+3 crc=0x13A29877
+  duration 2681 nsec
+4 crc=0x70A27D8A
+  duration 2692 nsec
+5 crc=0xA541927E
+  duration 2912 nsec
+6 crc=0xE964B13D
+  duration 3051 nsec
+7 crc=0xDD45AAB8
+  duration 3090 nsec
+8 crc=0x8F2261D3
+  duration 3516 nsec
+9 crc=0x38116FAC
+  duration 2629 nsec
+---
+avg duration 2880 nsec across 10 iterations
+ppc # 
+
+ppc # ./main -p -d
+0 crc=0x105EC76F
+  duration 3029 nsec
+1 crc=0xF26B8303
+  duration 2344 nsec
+2 crc=0x3FC5F181
+  duration 2426 nsec
+3 crc=0x13A29877
+  duration 2383 nsec
+4 crc=0x70A27D8A
+  duration 2818 nsec
+5 crc=0xA541927E
+  duration 2375 nsec
+6 crc=0xE964B13D
+  duration 2907 nsec
+7 crc=0xDD45AAB8
+  duration 3070 nsec
+8 crc=0x8F2261D3
+  duration 2847 nsec
+9 crc=0x38116FAC
+  duration 2379 nsec
+---
+avg duration 2657 nsec across 10 iterations
+ppc # 
+
+ppc # ./main -p -m
+0 crc=0x105EC76F
+  duration 537 nsec
+1 crc=0xF26B8303
+  duration 1129 nsec
+2 crc=0x3FC5F181
+  duration 1262 nsec
+3 crc=0x13A29877
+  duration 1244 nsec
+4 crc=0x70A27D8A
+  duration 1172 nsec
+5 crc=0xA541927E
+  duration 1374 nsec
+6 crc=0xE964B13D
+  duration 1592 nsec
+7 crc=0xDD45AAB8
+  duration 1426 nsec
+8 crc=0x8F2261D3
+  duration 1424 nsec
+9 crc=0x38116FAC
+  duration 1555 nsec
+---
+avg duration 1271 nsec across 10 iterations
+ppc # 
+
+
+3. On x86 architecture, show average duration of fastzero 
+   call for a 1GB buffer len.
+
+
+x86 # ./main -p -n 50 | tail -n 1
+avg duration 38015045 nsec across 50 iterations
+x86 # ./main -p -n 50 -d | tail -n 1
+avg duration 36180315 nsec across 50 iterations
+x86 # ./main -p -n 50 -m | tail -n 1
+avg duration 169 nsec across 50 iterations
+x86 #
+
+
+4. On x86 architecture, show crc values match each other.
+
+
+x86 # ./main -p 
+0 crc=0x105EC76F
+  duration 104928822 nsec
+1 crc=0xF26B8303
+  duration 49838739 nsec
+2 crc=0x3FC5F181
+  duration 40029135 nsec
+3 crc=0x13A29877
+  duration 36861298 nsec
+4 crc=0x70A27D8A
+  duration 36194934 nsec
+5 crc=0xA541927E
+  duration 36143480 nsec
+6 crc=0xE964B13D
+  duration 36158060 nsec
+7 crc=0xDD45AAB8
+  duration 36161193 nsec
+8 crc=0x8F2261D3
+  duration 36130159 nsec
+9 crc=0x38116FAC
+  duration 36213232 nsec
+---
+avg duration 44865905 nsec across 10 iterations
+x86 # 
+
+x86 # ./main -p -d
+0 crc=0x105EC76F
+  duration 42411011 nsec
+1 crc=0xF26B8303
+  duration 36312362 nsec
+2 crc=0x3FC5F181
+  duration 36223383 nsec
+3 crc=0x13A29877
+  duration 36191507 nsec
+4 crc=0x70A27D8A
+  duration 36116478 nsec
+5 crc=0xA541927E
+  duration 36131226 nsec
+6 crc=0xE964B13D
+  duration 36096301 nsec
+7 crc=0xDD45AAB8
+  duration 36219417 nsec
+8 crc=0x8F2261D3
+  duration 36164011 nsec
+9 crc=0x38116FAC
+  duration 36125268 nsec
+---
+avg duration 36799096 nsec across 10 iterations
+x86 # 
+
+
+x86 # ./main -p -m
+0 crc=0x105EC76F
+  duration 153 nsec
+1 crc=0xF26B8303
+  duration 218 nsec
+2 crc=0x3FC5F181
+  duration 192 nsec
+3 crc=0x13A29877
+  duration 184 nsec
+4 crc=0x70A27D8A
+  duration 175 nsec
+5 crc=0xA541927E
+  duration 195 nsec
+6 crc=0xE964B13D
+  duration 184 nsec
+7 crc=0xDD45AAB8
+  duration 164 nsec
+8 crc=0x8F2261D3
+  duration 170 nsec
+9 crc=0x38116FAC
+  duration 161 nsec
+---
+avg duration 179 nsec across 10 iterations
+x86 # 
+
+

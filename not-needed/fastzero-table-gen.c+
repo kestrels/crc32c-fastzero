@@ -1,0 +1,38 @@
+#include <stdio.h>
+#include <altivec.h>
+
+static inline unsigned long polynomial_multiply(unsigned int a, unsigned int b) {
+	vector unsigned int va = {a, 0, 0, 0};
+	vector unsigned int vb = {b, 0, 0, 0};
+	vector unsigned long vt;
+
+	__asm__("vpmsumw %0,%1,%2" : "=v"(vt) : "v"(va), "v"(vb));
+
+	return vt[0];
+}
+
+unsigned int barrett_reduction(unsigned long val);
+
+static inline unsigned int gf_multiply(unsigned int a, unsigned int b) {
+	return barrett_reduction(polynomial_multiply(a, b));
+}
+
+int main(int argc, char ** argv) {
+	unsigned long i;
+	unsigned int table[64];
+	
+	/* construct a table of our values */
+	table[0] = 0x100;
+	for (i=1; i<64; i++) {
+		table[i] = gf_multiply(table[i-1], table[i-1]);
+	}
+
+	printf("/* fast zero table */\n\nunsigned int crc_zero[] = {\n");
+	for (i=0; i<63; i++) {
+		printf("\t0x%x,\n", table[i]);
+	}
+	printf("\t0x%x\n", table[63]);
+	printf("};\n");
+
+	return 0;
+}
