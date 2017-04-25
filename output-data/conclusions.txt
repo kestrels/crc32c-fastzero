@@ -1,0 +1,114 @@
+1. Which algorithm is faster on x86?  
+
+Mirantis.  
+
+Here is a 1GB length of zeroes (-z value).  Without -d or -m flag 
+we actually allocate a real 1GB buffer (-b value), bzero it, and 
+CRC it using ceph_crc32c_intel_fast.  With -d flag we 
+pass a NULL pointer so it uses crc32_iscsi_zero_00.  
+With -m flag we call the Mirantis algorithm, ceph_crc32c_zeros.
+
+x86 # echo "1024 * 1024 * 1024" | bc
+1073741824
+x86 # export LEN=1073741824
+x86 # ./main -p -b $LEN -z $LEN -n 50 | tail -n 1
+avg duration 94595488 nsec across 50 iterations
+x86 # ./main -p -b $LEN -z $LEN -n 50 -d | tail -n 1
+avg duration 36196651 nsec across 50 iterations
+x86 # ./main -p -b $LEN -z $LEN -n 50 -m | tail -n 1
+avg duration 160 nsec across 50 iterations
+x86 # 
+
+2. Which algorithm is faster on ppc64le?  
+
+Mirantis.  
+
+Here is a 1GB length of zeroes (-z value).  Without -d or -m flag 
+we actually allocate a real 1GB buffer (-b value), bzero it, and 
+CRC it where ceph_crc32c_ppc calls crc32_vpmsum.  With -d flag we 
+pass a NULL pointer so it uses Daniel's fast zero algorithm, where 
+ceph_crc32c_ppc calls append_zeros.  With -m flag we call the Mirantis 
+algorithm, ceph_crc32c_zeros.
+
+ppc # echo "1024 * 1024 * 1024" | bc
+1073741824
+ppc # export LEN=1073741824
+ppc # ./main -p -b $LEN -z $LEN -n 50 | tail -n 1
+avg duration 55999682 nsec across 50 iterations
+ppc # ./main -p -b $LEN -z $LEN -n 50 -d | tail -n 1
+avg duration 1289 nsec across 50 iterations
+ppc # ./main -p -b $LEN -z $LEN -n 50 -m | tail -n 1
+avg duration 566 nsec across 50 iterations
+ppc # 
+
+3.  Do those results change with different buffer sizes?  
+
+For the most part no.  Here is a 128KB buffer.
+
+ppc # echo "128 * 1024" | bc
+131072
+ppc # export LEN=131072
+ppc # ./main -p -b $LEN -z $LEN -n 50 | tail -n 1
+avg duration 6193 nsec across 50 iterations
+ppc # ./main -p -b $LEN -z $LEN -n 50 -d | tail -n 1
+avg duration 2017 nsec across 50 iterations
+ppc # ./main -p -b $LEN -z $LEN -n 50 -m | tail -n 1
+avg duration 818 nsec across 50 iterations
+ppc # 
+
+x86 # echo "128 * 1024" | bc
+131072
+x86 # export LEN=131072
+x86 # ./main -p -b $LEN -z $LEN -n 50 | tail -n 1
+avg duration 7298 nsec across 50 iterations
+x86 # ./main -p -b $LEN -z $LEN -n 50 -d | tail -n 1
+avg duration 4963 nsec across 50 iterations
+x86 # ./main -p -b $LEN -z $LEN -n 50 -m | tail -n 1
+avg duration 170 nsec across 50 iterations
+x86 # 
+
+Here is a 128MB buffer.  
+
+ppc # echo "128 * 1024 * 1024" | bc
+134217728
+ppc # export LEN=134217728
+ppc # ./main -p -b $LEN -z $LEN -n 50 | tail -n 1
+avg duration 7000045 nsec across 50 iterations
+ppc # ./main -p -b $LEN -z $LEN -n 50 -d | tail -n 1
+avg duration 1501 nsec across 50 iterations
+ppc # ./main -p -b $LEN -z $LEN -n 50 -m | tail -n 1
+avg duration 717 nsec across 50 iterations
+ppc # 
+
+x86 # echo "128 * 1024 * 1024" | bc
+134217728
+x86 # export LEN=134217728
+x86 # ./main -p -b $LEN -z $LEN -n 50 | tail -n 1
+avg duration 11909949 nsec across 50 iterations
+x86 # ./main -p -b $LEN -z $LEN -n 50 -d | tail -n 1
+avg duration 4516113 nsec across 50 iterations
+x86 # ./main -p -b $LEN -z $LEN -n 50 -m | tail -n 1
+avg duration 150 nsec across 50 iterations
+x86 # 
+
+If the buffer length gets really small (ie under 1KB) then 
+it becomes faster just to allocate a buffer and CRC it instead 
+of passing in a NULL bufP and using a fastzero optimization.  
+
+ppc # export LEN=512
+ppc # ./main -p -b $LEN -z $LEN -n 50 | tail -n 1
+avg duration 187 nsec across 50 iterations
+ppc # ./main -p -b $LEN -z $LEN -n 50 -d | tail -n 1
+avg duration 1833 nsec across 50 iterations
+ppc # ./main -p -b $LEN -z $LEN -n 50 -m | tail -n 1
+avg duration 675 nsec across 50 iterations
+ppc # 
+
+x86 # ./main -p -b $LEN -z $LEN -n 50 | tail -n 1
+avg duration 208 nsec across 50 iterations
+x86 # ./main -p -b $LEN -z $LEN -n 50 -d | tail -n 1
+avg duration 256 nsec across 50 iterations
+x86 # ./main -p -b $LEN -z $LEN -n 50 -m | tail -n 1
+avg duration 246 nsec across 50 iterations
+x86 # 
+
