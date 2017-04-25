@@ -16,7 +16,7 @@
 #include "crc32c_intel_fast.h"
 #endif
 
-#define BUFLEN 512
+#define DEFAULT_BUFLEN 512
 #define DEFAULT_PERFTEST_BUFLEN 1073741824
 #define DEFAULT_PERFTEST_ITERATIONS 10
 #define BILLION 1000000000L /* used to convert sec to nsec */
@@ -31,6 +31,7 @@ struct crc_turbo_struct
 struct global
 {
     /* flags and flag related values */
+    boolean     b_flag;
     boolean     d_flag;  /* Use Daniel's table driven optimization. */
     boolean     f_flag;
     boolean     l_flag;
@@ -41,15 +42,18 @@ struct global
     boolean     v_flag;
     boolean     s_flag;
     boolean     z_flag;
+    int         b_value; /* length of buffer when -v and -l aren't specified */
     char       *f_value; /* filename */
     int         n_value; /* number of iterations used by perfteset */
-    int         l_value; /* length of buffer */
+    int         l_value; /* length of buffer to fill with -v value */
     uint32_t    s_value; /* nbytes worth of zeros to append */
     int         v_value; /* buffer filled with this value */
     int         z_value; /* nbytes worth of zeros to append */
 
     /* general */
     char       *prog_name;
+    char       *bufP;
+    int         buflen;
 } g;
 
 #ifdef HAVE_POWER8
@@ -66,16 +70,19 @@ Usage(void)
     fprintf(stderr, "      -v <value> -l <len> |\n");
     fprintf(stderr, "      -s <startcrc> | \n");
     fprintf(stderr, "      -p }\n");
-    fprintf(stderr, "    [ -z <zerolen> ] [-d] [-m] [-n] }\n");
+    fprintf(stderr, "    [ -z <zerolen> ] [-b <buflen> ] [-d] [-m] [-n] }\n");
     fprintf(stderr, "\n");
     fprintf(stderr, "    -f <filename> : Read the file and calculate crc32c.\n");
     fprintf(stderr, "    -v <value>    : Fill in memory buffer with this\n");
     fprintf(stderr, "                  : value and calculate crc32c.\n");
-    fprintf(stderr, "    -l <len>      : Length of in memory buffer.\n");
+    fprintf(stderr, "    -l <len>      : Length of in memory buffer to\n");
+    fprintf(stderr, "                    fill with -v value.\n");
     fprintf(stderr, "    -s <startcrc> : Starting crc in hex.\n");
     fprintf(stderr, "    -p            : Perftest for fastzero.\n");
     fprintf(stderr, "    -n            : Number of iterations used by perftest.\n");
     fprintf(stderr, "    -z <zerolen>  : Length of zero'ed buffer to append.\n");
+    fprintf(stderr, "    -b <buflen>   : Length of in memory buffer when\n");
+    fprintf(stderr, "                    -v and -l are not specified.\n");
     fprintf(stderr, "    -d            : Use Daniel's optimized zero buffer code.\n");
     fprintf(stderr, "    -m            : Use Mirantis's optimized zero buffer code.\n");
     exit(1);
@@ -86,14 +93,16 @@ get_flags(int argc, char **argv)
 {
     int rc;
     int nInputs = 0;
-    int for_ppc = 0;
-    int for_x86 = 0;
 
     /* Remember program name for Usage. */
     g.prog_name = argv[0];
 
-    while((rc = getopt(argc, argv, "df:l:mn:ptv:s:z:")) != EOF) {
+    while((rc = getopt(argc, argv, "b:df:l:mn:ptv:s:z:")) != EOF) {
         switch(rc) {
+        case 'b':
+            g.b_flag = true;
+            g.b_value = atoi(optarg);
+            break;
         case 'd':
             g.d_flag = true;
             break;
@@ -165,6 +174,12 @@ get_flags(int argc, char **argv)
         fprintf(stderr, "The -n flag requires the -p flag.\n");
         Usage();
     }
+}
+
+void check_architecture(void)
+{
+    int for_ppc = 0;
+    int for_x86 = 0;
 
 #ifdef HAVE_POWER8
     for_ppc = 1;
@@ -174,7 +189,6 @@ get_flags(int argc, char **argv)
     fprintf(stderr, "Unable to detect hw architecture.\n");
     exit(1); 
 #endif
-
 }
 
 static uint64_t
@@ -282,10 +296,11 @@ int perftest(void)
     uint64_t         diff_nsec = 0;
     uint64_t         total_diff_nsec = 0;
     uint64_t         avg_diff_nsec = 0;
-    char            *bufP = NULL;
     int              max_iter;
     int              iter;
-    int              nzerobytes;
+    size_t           off = 0;
+    size_t           nbytes = 0;
+    size_t           nzerobytes = 0;
     uint32_t         crc;
 
     /* When checking zero buffer we want to start with a non-zero crc, 
@@ -326,11 +341,33 @@ int perftest(void)
 	else
 	{
 	    clock_gettime(CLOCK_MONOTONIC, &start);
+
+            /* In this case we are timing how long it would take to
+             * crc an actual buffer filled in with zeroes.  It will be done
+             * in a single call if the buffer is large enough to fit all the
+             * zeroes.  If not it will require multiple calls.
+             */
+            off = 0;
+
+            do
+            {
+                /* Calc less than a buffer, a buffer at a time, or the remainder. */
+                if (nzerobytes < g.buflen)
+                    nbytes = nzerobytes;
+                else if (off + g.buflen < nzerobytes)
+                    nbytes = g.buflen;
+                else
+                    nbytes = nzerobytes - off;
+
 #ifdef HAVE_POWER8
-	    crc = ceph_crc32c_ppc(crc, bufP, nzerobytes);
+	        crc = ceph_crc32c_ppc(crc, (unsigned char const *) g.bufP, nbytes);
 #elif HAVE_GOOD_YASM_ELF64
-	    crc = ceph_crc32c_intel_fast(crc, bufP, nzerobytes);
+	        crc = ceph_crc32c_intel_fast(crc, (unsigned char const *) g.bufP, nbytes);
 #endif
+
+                off += nbytes;
+	    } while (off < nzerobytes);
+
 	    clock_gettime(CLOCK_MONOTONIC, &end);
 	}
 
@@ -363,9 +400,7 @@ int perftest(void)
 
 int main(int argc, char **argv)
 {
-    char *bufP = NULL;
     int rc=0;
-    int buflen=0;
     int iter=0;
     int fill_value=0;
     int fd=0;
@@ -381,10 +416,29 @@ int main(int argc, char **argv)
 
     if (g.m_flag) create_turbo_table();
 
+    /* Allocate a general use memory buffer.  The -l flag overrides 
+     * others.  If that is not specified then -b flag overrides 
+     * the default value.
+     */
+    if (g.l_flag)
+        g.buflen = g.l_value;
+    else if (g.b_flag)
+        g.buflen = g.b_value;
+    else
+        g.buflen = DEFAULT_BUFLEN;
+
+    g.bufP = malloc(g.buflen);
+    if (!g.bufP)
+    {
+        fprintf(stderr, "malloc error\n");
+        exit(1);
+    }
+    memset(g.bufP, 0, g.buflen);
+
     if (g.p_flag)
     {
         rc = perftest();
-        return rc;
+        goto xerror;
     }
 
     if (g.s_flag)
@@ -393,39 +447,21 @@ int main(int argc, char **argv)
     }
     else if (g.v_flag && g.l_flag)
     {
-        fill_value = g.v_value;
-        buflen     = g.l_value;
+        fill_value   = g.v_value;
 
-        bufP = malloc(buflen);
-        if (!bufP)
-        {
-            fprintf(stderr, "malloc error\n");
-            exit(1);
-        }
-        memset(bufP, 0, buflen);
-
-	for(iter=0; iter<buflen; iter++)
+	for(iter=0; iter<g.buflen; iter++)
 	{
-            bufP[iter] = fill_value;
+            g.bufP[iter] = fill_value;
 	}
 
 #ifdef HAVE_POWER8
-	crc = ceph_crc32c_ppc(crc, (unsigned char const *) bufP, BUFLEN);
+	crc = ceph_crc32c_ppc(crc, (unsigned char const *) g.bufP, g.buflen);
 #elif HAVE_GOOD_YASM_ELF64
-	crc = ceph_crc32c_intel_fast(crc, (unsigned char const *) bufP, BUFLEN);
+	crc = ceph_crc32c_intel_fast(crc, (unsigned char const *) g.bufP, g.buflen);
 #endif
     }
     else
     {
-        buflen = BUFLEN;
-        bufP = malloc(buflen);
-        if (!bufP)
-        {
-            fprintf(stderr, "malloc error\n");
-            exit(1);
-        }
-        memset(bufP, 0, buflen);
-
         fd = open(g.f_value, O_RDONLY);
         if (fd < 0)
         {
@@ -433,7 +469,7 @@ int main(int argc, char **argv)
             exit(1);
         }
 
-        while ((nread = read(fd, bufP, buflen)) > 0)
+        while ((nread = read(fd, g.bufP, g.buflen)) > 0)
         {
             off = 0;
             do
@@ -445,12 +481,12 @@ int main(int argc, char **argv)
                  * we'll leave this in just in case we ever want to calculate 
                  * smaller crc32c chunks of a larger buffer.
                  */
-                if (nbytes > buflen) nbytes = buflen;
+                if (nbytes > g.buflen) nbytes = g.buflen;
 
 #ifdef HAVE_POWER8
-	        crc = ceph_crc32c_ppc(crc, (unsigned char const *) bufP + off, nbytes);
+	        crc = ceph_crc32c_ppc(crc, (unsigned char const *) g.bufP + off, nbytes);
 #elif HAVE_GOOD_YASM_ELF64
-	        crc = ceph_crc32c_intel_fast(crc, (unsigned char const *) bufP + off, nbytes);
+	        crc = ceph_crc32c_intel_fast(crc, (unsigned char const *) g.bufP + off, nbytes);
 #endif
 
                 off += nbytes;
@@ -480,25 +516,25 @@ int main(int argc, char **argv)
     {
         /* Calculate crc32c of zero'ed buffer with no optimizations. */
 
-        /* Generate zero filled buffer. */
-        memset(bufP, 0, buflen);
+        /* Make sure the buffer is now zero filled. */
+        memset(g.bufP, 0, g.buflen);
         off = 0;
         nzerobytes = g.z_value;
 
         do
         {
             /* Calc less than a buffer, a buffer at a time, or the remainder. */
-            if (nzerobytes < buflen)
+            if (nzerobytes < g.buflen)
                 nbytes = nzerobytes;
-            else if (off + buflen < nzerobytes)
-                nbytes = buflen;
+            else if (off + g.buflen < nzerobytes)
+                nbytes = g.buflen;
             else
                 nbytes = nzerobytes - off;
 
 #ifdef HAVE_POWER8
-	    crc = ceph_crc32c_ppc(crc, (unsigned char const *) bufP, nbytes);
+	    crc = ceph_crc32c_ppc(crc, (unsigned char const *) g.bufP, nbytes);
 #elif HAVE_GOOD_YASM_ELF64
-	    crc = ceph_crc32c_intel_fast(crc, (unsigned char const *) bufP, nbytes);
+	    crc = ceph_crc32c_intel_fast(crc, (unsigned char const *) g.bufP, nbytes);
 #endif
 
             off += nbytes;
@@ -506,6 +542,13 @@ int main(int argc, char **argv)
     }
 
     printf("crc=0x%08X\n", crc);
+
+xerror:
+    if (g.bufP) 
+    {
+        free(g.bufP);
+        g.bufP = NULL;
+    }
     
-    return 0;
+    return rc;
 }
