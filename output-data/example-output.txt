@@ -1,10 +1,10 @@
 1. On ppc64le architecture, show average duration of fastzero 
    call for a 1GB buffer len.
 
+ppc # ./main -p -n 50 | tail -n 1
+avg duration 137613320 nsec across 50 iterations
 ppc # ./main -p -n 50 -d | tail -n 1
-avg duration 2102 nsec across 50 iterations
- ./main -p -n 50 -d | tail -n 1
-avg duration 2110 nsec across 50 iterations
+avg duration 809 nsec across 50 iterations
 ppc # ./main -p -n 50 -m | tail -n 1
 avg duration 953 nsec across 50 iterations
 ppc # 
@@ -12,80 +12,79 @@ ppc #
 
 2. On ppc64le architecture, show crc values match each other.
 
-
 ppc # ./main -p 
 0 crc=0x105EC76F
-  duration 3062 nsec
+  duration 146188084 nsec
 1 crc=0xF26B8303
-  duration 2397 nsec
+  duration 137419337 nsec
 2 crc=0x3FC5F181
-  duration 2771 nsec
+  duration 137398063 nsec
 3 crc=0x13A29877
-  duration 2681 nsec
+  duration 137397023 nsec
 4 crc=0x70A27D8A
-  duration 2692 nsec
+  duration 137402430 nsec
 5 crc=0xA541927E
-  duration 2912 nsec
+  duration 137407781 nsec
 6 crc=0xE964B13D
-  duration 3051 nsec
+  duration 137400306 nsec
 7 crc=0xDD45AAB8
-  duration 3090 nsec
+  duration 137395087 nsec
 8 crc=0x8F2261D3
-  duration 3516 nsec
+  duration 137425231 nsec
 9 crc=0x38116FAC
-  duration 2629 nsec
+  duration 137410387 nsec
 ---
-avg duration 2880 nsec across 10 iterations
+avg duration 138284372 nsec across 10 iterations
 ppc # 
 
 ppc # ./main -p -d
 0 crc=0x105EC76F
-  duration 3029 nsec
+  duration 1862 nsec
 1 crc=0xF26B8303
-  duration 2344 nsec
+  duration 1131 nsec
 2 crc=0x3FC5F181
-  duration 2426 nsec
+  duration 1039 nsec
 3 crc=0x13A29877
-  duration 2383 nsec
+  duration 951 nsec
 4 crc=0x70A27D8A
-  duration 2818 nsec
+  duration 934 nsec
 5 crc=0xA541927E
-  duration 2375 nsec
+  duration 1000 nsec
 6 crc=0xE964B13D
-  duration 2907 nsec
+  duration 1027 nsec
 7 crc=0xDD45AAB8
-  duration 3070 nsec
+  duration 1098 nsec
 8 crc=0x8F2261D3
-  duration 2847 nsec
+  duration 905 nsec
 9 crc=0x38116FAC
-  duration 2379 nsec
+  duration 949 nsec
 ---
-avg duration 2657 nsec across 10 iterations
+avg duration 1089 nsec across 10 iterations
 ppc # 
 
 ppc # ./main -p -m
 0 crc=0x105EC76F
-  duration 537 nsec
+  duration 564 nsec
 1 crc=0xF26B8303
-  duration 1129 nsec
+  duration 1190 nsec
 2 crc=0x3FC5F181
-  duration 1262 nsec
+  duration 1434 nsec
 3 crc=0x13A29877
-  duration 1244 nsec
+  duration 1297 nsec
 4 crc=0x70A27D8A
-  duration 1172 nsec
+  duration 1272 nsec
 5 crc=0xA541927E
-  duration 1374 nsec
+  duration 1182 nsec
 6 crc=0xE964B13D
-  duration 1592 nsec
+  duration 1209 nsec
 7 crc=0xDD45AAB8
-  duration 1426 nsec
+  duration 1231 nsec
 8 crc=0x8F2261D3
-  duration 1424 nsec
+  duration 1228 nsec
 9 crc=0x38116FAC
-  duration 1555 nsec
+  duration 1205 nsec
 ---
-avg duration 1271 nsec across 10 iterations
+avg duration 1181 nsec across 10 iterations
 ppc # 
 
 

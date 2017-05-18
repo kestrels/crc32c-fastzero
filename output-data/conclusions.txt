@@ -21,7 +21,7 @@ x86 #
 
 2. Which algorithm is faster on ppc64le?  
 
-Mirantis.  
+Daniel's ppc64le assembly.
 
 Here is a 1GB length of zeroes (-z value).  Without -d or -m flag 
 we actually allocate a real 1GB buffer (-b value), bzero it, and 
@@ -34,12 +34,22 @@ ppc # echo "1024 * 1024 * 1024" | bc
 1073741824
 ppc # export LEN=1073741824
 ppc # ./main -p -b $LEN -z $LEN -n 50 | tail -n 1
-avg duration 55999682 nsec across 50 iterations
+avg duration 55931260 nsec across 50 iterations
 ppc # ./main -p -b $LEN -z $LEN -n 50 -d | tail -n 1
-avg duration 1289 nsec across 50 iterations
+avg duration 511 nsec across 50 iterations
 ppc # ./main -p -b $LEN -z $LEN -n 50 -m | tail -n 1
-avg duration 566 nsec across 50 iterations
+avg duration 565 nsec across 50 iterations
 ppc # 
+
+Drastically increase iteration count to shake out variation.
+
+ppc # export ITERS=10000000
+ppc # ./main -p -b $LEN -z $LEN -n $ITERS -d | tail -n 1
+avg duration 437 nsec across 10000000 iterations
+ppc # ./main -p -b $LEN -z $LEN -n $ITERS -m | tail -n 1
+avg duration 544 nsec across 10000000 iterations
+ppc # 
+
 
 3.  Do those results change with different buffer sizes?  
 
@@ -49,11 +59,16 @@ ppc # echo "128 * 1024" | bc
 131072
 ppc # export LEN=131072
 ppc # ./main -p -b $LEN -z $LEN -n 50 | tail -n 1
-avg duration 6193 nsec across 50 iterations
+avg duration 6205 nsec across 50 iterations
 ppc # ./main -p -b $LEN -z $LEN -n 50 -d | tail -n 1
-avg duration 2017 nsec across 50 iterations
+avg duration 626 nsec across 50 iterations
 ppc # ./main -p -b $LEN -z $LEN -n 50 -m | tail -n 1
-avg duration 818 nsec across 50 iterations
+avg duration 780 nsec across 50 iterations
+ppc # export ITERS=10000000
+ppc # ./main -p -b $LEN -z $LEN -n $ITERS -d | tail -n 1
+avg duration 355 nsec across 10000000 iterations
+ppc # ./main -p -b $LEN -z $LEN -n $ITERS -m | tail -n 1
+avg duration 464 nsec across 10000000 iterations
 ppc # 
 
 x86 # echo "128 * 1024" | bc
@@ -73,11 +88,16 @@ ppc # echo "128 * 1024 * 1024" | bc
 134217728
 ppc # export LEN=134217728
 ppc # ./main -p -b $LEN -z $LEN -n 50 | tail -n 1
-avg duration 7000045 nsec across 50 iterations
+avg duration 6902062 nsec across 50 iterations
 ppc # ./main -p -b $LEN -z $LEN -n 50 -d | tail -n 1
-avg duration 1501 nsec across 50 iterations
+avg duration 488 nsec across 50 iterations
 ppc # ./main -p -b $LEN -z $LEN -n 50 -m | tail -n 1
-avg duration 717 nsec across 50 iterations
+avg duration 542 nsec across 50 iterations
+ppc # export ITERS=10000000
+ppc # ./main -p -b $LEN -z $LEN -n $ITERS -d | tail -n 1
+avg duration 437 nsec across 10000000 iterations
+ppc # ./main -p -b $LEN -z $LEN -n $ITERS -m | tail -n 1
+avg duration 544 nsec across 10000000 iterations
 ppc # 
 
 x86 # echo "128 * 1024 * 1024" | bc
@@ -99,7 +119,7 @@ ppc # export LEN=512
 ppc # ./main -p -b $LEN -z $LEN -n 50 | tail -n 1
 avg duration 187 nsec across 50 iterations
 ppc # ./main -p -b $LEN -z $LEN -n 50 -d | tail -n 1
-avg duration 1833 nsec across 50 iterations
+avg duration 510 nsec across 50 iterations
 ppc # ./main -p -b $LEN -z $LEN -n 50 -m | tail -n 1
 avg duration 675 nsec across 50 iterations
 ppc # 
