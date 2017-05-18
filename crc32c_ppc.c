@@ -48,20 +48,26 @@ static inline unsigned long polynomial_multiply(unsigned int a, unsigned int b) 
         return vt[0];
 }
 
-static unsigned int reflect32(unsigned int num) {
-        /*
-         * this can be improved, but for the simplicity of licensing I have
-         * written down the first correct implementation that came to mind
-         */
-        int i;
-        unsigned int result = 0;
-        for (i=0; i<32; i++) {
-                if (num & (1 << i))
-                        result |= 1 << (31 - i);
-        }
-        return result;
+static unsigned int reflect32(unsigned int v) {
+    if (v == 0)
+        return v;
+
+    /* reverse bits
+     * swap odd and even bits
+     */
+    v = ((v >> 1) & 0x55555555) | ((v & 0x55555555) << 1);
+    /* swap consecutive pairs */
+    v = ((v >> 2) & 0x33333333) | ((v & 0x33333333) << 2);
+    /* swap nibbles ... */
+    v = ((v >> 4) & 0x0F0F0F0F) | ((v & 0x0F0F0F0F) << 4);
+    /* swap bytes */
+    v = ((v >> 8) & 0x00FF00FF) | ((v & 0x00FF00FF) << 8);
+    /* swap 2-byte long pairs */
+    v = ( v >> 16             ) | ( v               << 16);
+
+    return v;
 }
-                                                                                         
+
 unsigned int barrett_reduction(unsigned long val);
 
 static inline unsigned int gf_multiply(unsigned int a, unsigned int b) {
